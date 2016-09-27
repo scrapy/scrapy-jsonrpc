@@ -7,7 +7,12 @@ import json
 import traceback
 from six.moves import urllib
 
-from scrapy.utils.python import unicode_to_str
+# Scrapy >= 1.0
+try:
+    from scrapy.utils.python import to_bytes
+# Scrapy 0.24 and below
+except ImportError:
+    from scrapy.utils.python import unicode_to_str as to_bytes
 from scrapy_jsonrpc.serialize import ScrapyJSONDecoder
 
 
@@ -37,7 +42,7 @@ def jsonrpc_client_call(url, method, *args, **kwargs):
     if args and kwargs:
         raise ValueError("Pass *args or **kwargs but not both to jsonrpc_client_call")
     req = {'jsonrpc': '2.0', 'method': method, 'params': args or kwargs, 'id': 1}
-    data = unicode_to_str(json.dumps(req))
+    data = to_bytes(json.dumps(req))
     body = urllib.request.urlopen(url, data).read()
     res = json.loads(body.decode('utf-8'))
     if 'result' in res:
