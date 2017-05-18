@@ -6,7 +6,12 @@ import decimal
 import six
 from twisted.internet import defer
 
-from scrapy.spiders import Spider
+# Scrapy >= 1.0
+try:
+    from scrapy.spiders import Spider
+# Scrapy 0.24 and below
+except ImportError:
+    from scrapy.spider import Spider
 from scrapy.http import Request, Response
 from scrapy.item import BaseItem
 
