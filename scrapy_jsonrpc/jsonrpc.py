@@ -58,10 +58,11 @@ def jsonrpc_server_call(target, jsonrpc_request, json_decoder=None):
         json_decoder = ScrapyJSONDecoder()
 
     try:
-        req = json_decoder.decode(jsonrpc_request)
+        req = json_decoder.decode(jsonrpc_request.decode('utf-8'))
     except Exception as e:
-        return jsonrpc_error(None, jsonrpc_errors.PARSE_ERROR, 'Parse error',
-                             traceback.format_exc())
+        return jsonrpc_error(
+            None, jsonrpc_errors.PARSE_ERROR, 'Parse error',
+            traceback.format_exc())
 
     try:
         id, methname = req['id'], req['method']
