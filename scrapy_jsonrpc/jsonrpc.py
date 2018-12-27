@@ -65,26 +65,26 @@ def jsonrpc_server_call(target, jsonrpc_request, json_decoder=None):
             traceback.format_exc())
 
     try:
-        id, methname = req['id'], req['method']
+        request_id, methname = req['id'], req['method']
     except KeyError:
         return jsonrpc_error(None, jsonrpc_errors.INVALID_REQUEST, 'Invalid Request')
 
     try:
         method = getattr(target, methname)
     except AttributeError:
-        return jsonrpc_error(id, jsonrpc_errors.METHOD_NOT_FOUND, 'Method not found')
+        return jsonrpc_error(request_id, jsonrpc_errors.METHOD_NOT_FOUND, 'Method not found')
 
     params = req.get('params', [])
     a, kw = ([], params) if isinstance(params, dict) else (params, {})
     kw = dict([(str(k), v) for k, v in kw.items()]) # convert kw keys to str
     try:
-        return jsonrpc_result(id, method(*a, **kw))
+        return jsonrpc_result(request_id, method(*a, **kw))
     except Exception as e:
-        return jsonrpc_error(id, jsonrpc_errors.INTERNAL_ERROR, str(e), \
+        return jsonrpc_error(request_id, jsonrpc_errors.INTERNAL_ERROR, str(e), \
             traceback.format_exc())
 
 
-def jsonrpc_error(id, code, message, data=None):
+def jsonrpc_error(request_id, code, message, data=None):
     """Create JSON-RPC error response"""
     return {
         'jsonrpc': '2.0',
@@ -93,14 +93,14 @@ def jsonrpc_error(id, code, message, data=None):
             'message': message,
             'data': data,
         },
-        'id': id,
+        'id': request_id,
     }
 
 
-def jsonrpc_result(id, result):
+def jsonrpc_result(request_id, result):
     """Create JSON-RPC result response"""
     return {
         'jsonrpc': '2.0',
         'result': result,
-        'id': id,
+        'id': request_id,
     }
