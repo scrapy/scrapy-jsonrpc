@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from twisted.internet import defer
 
-from scrapy.spider import Spider
+from scrapy.spiders import Spider
 from scrapy.http import Request, Response
 from scrapy_jsonrpc.serialize import SpiderReferencer, ScrapyJSONEncoder, ScrapyJSONDecoder
 
@@ -14,9 +14,11 @@ class _EngineMock(object):
     def __init__(self, open_spiders):
         self.open_spiders = open_spiders
 
+
 class CrawlerMock(object):
     def __init__(self, open_spiders):
         self.engine = _EngineMock(open_spiders)
+
 
 class BaseTestCase(unittest.TestCase):
 
@@ -28,6 +30,7 @@ class BaseTestCase(unittest.TestCase):
         self.spref = SpiderReferencer(crawler)
         self.encoder = ScrapyJSONEncoder(spref=self.spref)
         self.decoder = ScrapyJSONDecoder(spref=self.spref)
+
 
 class SpiderReferencerTestCase(BaseTestCase):
 
@@ -74,6 +77,7 @@ class SpiderReferencerTestCase(BaseTestCase):
         for spiders, refs in examples:
             self.assertEqual(sr.encode_references(spiders), refs)
             self.assertEqual(sr.decode_references(refs), spiders)
+
 
 class JsonEncoderTestCase(BaseTestCase):
 
@@ -130,4 +134,3 @@ class JsonEncoderTestCase(BaseTestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

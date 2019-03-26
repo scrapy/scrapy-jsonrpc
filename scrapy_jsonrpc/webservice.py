@@ -1,6 +1,8 @@
 import logging
+import six
 
 from twisted.web import server, resource
+from twisted.python.compat import _PY3, nativeString
 
 from scrapy.exceptions import NotConfigured
 from scrapy import signals
@@ -17,27 +19,34 @@ logger = logging.getLogger(__name__)
 class JsonResource(JsonResource_):
 
     def __init__(self, crawler, target=None):
-        JsonResource_.__init__(self)
+        super(JsonResource, self).__init__()
+
         self.crawler = crawler
         self.json_encoder = ScrapyJSONEncoder(crawler=crawler)
+
+    def getChildWithDefault(self, path, request):
+        path = path.decode('UTF-8')
+        return super(JsonResource, self).getChildWithDefault(path, request)
+
 
 class JsonRpcResource(JsonResource):
 
     def __init__(self, crawler, target=None):
-        JsonResource.__init__(self, crawler, target)
+        super(JsonRpcResource, self).__init__(crawler, target)
+
         self.json_decoder = ScrapyJSONDecoder(crawler=crawler)
         self.crawler = crawler
         self._target = target
 
-    def render_GET(self, txrequest):
+    def render_GET(self, request):
         return self.get_target()
 
-    def render_POST(self, txrequest):
-        reqstr = txrequest.content.getvalue()
+    def render_POST(self, request):
+        reqstr = request.content.getvalue()
         target = self.get_target()
         return jsonrpc_server_call(target, reqstr, self.json_decoder)
 
-    def getChild(self, name, txrequest):
+    def getChild(self, name, request):
         target = self.get_target()
         try:
             newtarget = getattr(target, name)
@@ -54,33 +63,37 @@ class CrawlerResource(JsonRpcResource):
     ws_name = 'crawler'
 
     def __init__(self, crawler):
-        JsonRpcResource.__init__(self, crawler, crawler)
+        super(CrawlerResource, self).__init__(crawler, target=crawler)
 
 
 class RootResource(JsonResource):
 
-    def render_GET(self, txrequest):
-        return {'resources': self.children.keys()}
+    def render_GET(self, request):
+        return {'resources': list(self.children.keys())}
 
-    def getChild(self, name, txrequest):
+    def getChild(self, name, request):
         if name == '':
             return self
-        return JsonResource.getChild(self, name, txrequest)
+        return JsonResource.getChild(self, name, request)
 
 
-class WebService(server.Site):
+class WebService(server.Site, object):
 
     def __init__(self, crawler):
         if not crawler.settings.getbool('JSONRPC_ENABLED'):
             raise NotConfigured
-        self.crawler = crawler
+
         logfile = crawler.settings['JSONRPC_LOGFILE']
+        self.crawler = crawler
         self.portrange = [int(x) for x in crawler.settings.getlist('JSONRPC_PORT', [6023, 6073])]
         self.host = crawler.settings.get('JSONRPC_HOST', '127.0.0.1')
+        self.noisy = False
+
         root = RootResource(crawler)
         root.putChild('crawler', CrawlerResource(self.crawler))
-        server.Site.__init__(self, root, logPath=logfile)
-        self.noisy = False
+
+        super(WebService, self).__init__(root, logPath=logfile)
+
         crawler.signals.connect(self.start_listening, signals.engine_started)
         crawler.signals.connect(self.stop_listening, signals.engine_stopped)
 
@@ -90,6 +103,7 @@ class WebService(server.Site):
 
     def start_listening(self):
         self.port = listen_tcp(self.portrange, self.host, self)
+
         logger.debug(
             'Web service listening on {host.host:s}:{host.port:d}'.format(
                 host=self.port.getHost()))
@@ -97,3 +111,22 @@ class WebService(server.Site):
     def stop_listening(self):
         self.port.stopListening()
 
+    def log(self, request):
+        """
+        Write a line representing C{request} to the access log file.
+
+        @param request: The request object about which to log.
+        @type request: L{Request}
+        """
+        try:
+            logFile = self.logFile
+        except AttributeError:
+            pass
+        else:
+            line = self._logFormatter(self._logDateTime, request) + u"\n"
+            if self._nativeize:
+                line = nativeString(line)
+            # If we're on Python3, we don't need to encode it
+            elif _PY3 is False:
+                line = line.encode("utf-8")
+            logFile.write(line)
