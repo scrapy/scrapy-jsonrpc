@@ -1,0 +1,14 @@
+[[source]]
+name = "aliyun"
+url = "http://repo.tendata.com.cn/repository/pypi-all/pypi"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+twisted = ">=10.0.0"
+scrapy = ">=0.25.0"
+six = ">=1.5.2"
+
+[requires]
+python_version = "3.6"

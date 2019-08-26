@@ -1,13 +1,13 @@
 import json
 import unittest
 from io import BytesIO
-from mock import patch
+from unittest.mock import patch
 from six.moves import urllib
 
 from scrapy_jsonrpc.jsonrpc import jsonrpc_client_call, jsonrpc_server_call, \
     JsonRpcError, jsonrpc_errors
 from scrapy_jsonrpc.serialize import ScrapyJSONDecoder
-from scrapy.utils.python import unicode_to_str, str_to_unicode
+from scrapy.utils.python import to_unicode, to_bytes
 from tests.test_serialize import CrawlerMock
 
 
@@ -17,8 +17,7 @@ def _umock(result=None, error=None):
         response.update(result=result)
     if error is not None:
         response.update(error=error)
-    return BytesIO(unicode_to_str(json.dumps(response)))
-
+    return BytesIO(to_bytes(json.dumps(response)))
 
 
 class TestTarget(object):
@@ -41,6 +40,7 @@ class JsonRpcUtilsTestCase(unittest.TestCase):
 
     def test_jsonrpc_client_call_request(self):
         sentcall = {}
+
         def _urlopen(url, data):
             sentcall['url'] = url
             sentcall['data'] = data
@@ -48,7 +48,7 @@ class JsonRpcUtilsTestCase(unittest.TestCase):
 
         with patch.object(urllib.request, 'urlopen', _urlopen):
             jsonrpc_client_call('url', 'test', 'one', 2)
-            req = json.loads(str_to_unicode(sentcall['data']))
+            req = json.loads(to_unicode(sentcall['data']))
             assert 'id' in req
             self.assertEqual(sentcall['url'], 'url')
             self.assertEqual(req['jsonrpc'], '2.0')
@@ -61,7 +61,7 @@ class JsonRpcUtilsTestCase(unittest.TestCase):
         # must return result or error
         self.assertRaises(ValueError, jsonrpc_client_call, 'url', 'test')
         urlopen_mock.return_value = _umock(result={'one': 1})
-        self.assertEquals(jsonrpc_client_call('url', 'test'), {'one': 1})
+        self.assertEqual(jsonrpc_client_call('url', 'test'), {'one': 1})
         urlopen_mock.return_value = _umock(error={'code': 123,
                                                   'message': 'hello',
                                                   'data': 'some data'})

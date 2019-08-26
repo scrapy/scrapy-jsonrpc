@@ -3,9 +3,10 @@ import datetime
 import json
 from decimal import Decimal
 
+from scrapy import Spider
 from twisted.internet import defer
 
-from scrapy.spider import Spider
+
 from scrapy.http import Request, Response
 from scrapy_jsonrpc.serialize import SpiderReferencer, ScrapyJSONEncoder, ScrapyJSONDecoder
 
